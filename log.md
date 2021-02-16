@@ -4,6 +4,9 @@
 * CSV
 * Statistics
 * StatsBase
+* Random
+* Distributions
+
 
 ## CSV
 * [Read CSV to Data Frame in Julia](https://towardsdatascience.com/read-csv-to-data-frame-in-julia-programming-lang-77f3d0081c14)
