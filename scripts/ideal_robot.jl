@@ -159,12 +159,14 @@ function append_landmark(self::Map, landmark)
 end
 
 function draw(self::Map, ax, elems)
-    for Im in self.landmarks
-        draw(Im, ax, elems)
+    for lm in self.landmarks
+        draw(lm, ax, elems)
     end
 end
 
-mutable struct IdealCamera
+abstract type AbstractCamera end
+
+mutable struct IdealCamera <: AbstractCamera
     map::Map
     lastdata
     distance_range
@@ -173,7 +175,7 @@ end
 
 IdealCamera(map) = IdealCamera(map, [], (0.5, 6.0), (-pi/3, pi/3))
 
-function visible(self::IdealCamera, polarpos)
+function visible(self::AbstractCamera, polarpos)
     if isnothing(polarpos)
         return false
     end
@@ -182,10 +184,10 @@ function visible(self::IdealCamera, polarpos)
         
 end
 
-function data(self::IdealCamera, cam_pose)
+function data(self::AbstractCamera, cam_pose)
     observed = []
     for lm in self.map.landmarks
-        p = observation_function(self, cam_pose, lm.pos)
+        p = relative_polar_pos(self, cam_pose, lm.pos)
         if visible(self, p)
             push!(observed, (p, lm.id))
         end
@@ -194,7 +196,7 @@ function data(self::IdealCamera, cam_pose)
     return observed
 end
 
-function observation_function(self::IdealCamera, cam_pose, obj_pos)
+function relative_polar_pos(self::AbstractCamera, cam_pose, obj_pos)
     diff = obj_pos - cam_pose[1:2]
     phi = atan(diff[2], diff[1]) - cam_pose[3]
     while phi > pi
@@ -207,7 +209,7 @@ function observation_function(self::IdealCamera, cam_pose, obj_pos)
     return [hypot(diff[1], diff[2]), phi]
 end
 
-function draw(self::IdealCamera, ax, elems, cam_pose)
+function draw(self::AbstractCamera, ax, elems, cam_pose)
     for lm in self.lastdata
         x,y,theta = cam_pose
         distance, direction = lm[1][1], lm[1][2]
