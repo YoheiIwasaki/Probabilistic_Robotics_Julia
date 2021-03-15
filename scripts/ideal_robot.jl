@@ -18,6 +18,11 @@ mutable struct World
     ani
 end
 
+function World_(time_span, time_interval, debug=false)
+    self = World([], debug, time_span, time_interval, nothing)
+    return self
+end
+
 World() = World([], false, 10, 1, nothing)
 World(debug) = World([], debug, 10, 1, nothing)
 World(time_span, time_interval) = World([], false, time_span, time_interval, nothing)
@@ -41,7 +46,7 @@ function draw(self::World)
 
     if self.debug
         for i = 1:1000
-            one_step(self, i, elems, ax)
+            one_step(i, self, elems, ax)
         end
     else
         self.ani = anim.FuncAnimation(fig, one_step, fargs=(self, elems, ax), 
@@ -66,11 +71,12 @@ function one_step(i,self::World, elems, ax)
     end
 end
 
-mutable struct Agent
+abstract type AbstractAgent end
+mutable struct Agent <: AbstractAgent
     nu
     omega
 end
-function decision(self::Agent, observation=nothing)
+function decision(self::AbstractAgent, observation=nothing)
     return self.nu, self.omega
 end
 
@@ -111,12 +117,12 @@ function draw(self::AbstractRobot, ax, elems)
     end
 end
 
-function state_transition(self::AbstractRobot, nu, omega, time)
-    t0 = self.pose[3]
+function state_transition(self::AbstractRobot, nu, omega, time, pose)
+    t0 = pose[3]
     if abs(omega) < 1e-10
-        return self.pose + [nu*cos(t0), nu*sin(t0), omega].*time
+        return pose + [nu*cos(t0), nu*sin(t0), omega].*time
     else
-        return self.pose + [nu/omega*(sin(t0+omega*time)-sin(t0)),
+        return pose + [nu/omega*(sin(t0+omega*time)-sin(t0)),
                                   nu/omega*(-cos(t0+omega*time)+cos(t0)),
                                  omega*time]
     end
@@ -131,7 +137,7 @@ function one_step(self::AbstractRobot, time_interval)
         obs = data(self.sensor, self.pose)
     end
     nu, omega = decision(self.agent, obs)
-    self.pose = state_transition(self, nu, omega, time_interval)
+    self.pose = state_transition(self, nu, omega, time_interval, self.pose)
 end
 
 mutable struct Landmark
@@ -167,13 +173,14 @@ end
 abstract type AbstractCamera end
 
 mutable struct IdealCamera <: AbstractCamera
-    map::Map
+    map
     lastdata
     distance_range
     direction_range
 end
 
 IdealCamera(map) = IdealCamera(map, [], (0.5, 6.0), (-pi/3, pi/3))
+IdealCamera() = IdealCamera(nothing, [], (0.5, 6.0), (-pi/3, pi/3))
 
 function visible(self::AbstractCamera, polarpos)
     if isnothing(polarpos)

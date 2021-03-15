@@ -117,7 +117,7 @@ mutable struct Robot <: AbstractRobot
     kidnap_dist
 end
 
-function Robot(pose, agent, sensor, color, noise_per_meter = 5, noise_std=pi/60,
+function Robot_(pose; agent=nothing, sensor=nothing, color="black", noise_per_meter = 5, noise_std=pi/60,
     bias_rate_stds=(0.1,0.1), expected_stuck_time=1e100, expected_escape_time = 1e-100,
     expected_kidnap_time=1e100, kidnap_range_x=(-5.0, 5.0), kidnap_range_y=(-5.0, 5.0))
     rbt = Robot(ntuple(x->nothing, fieldcount(Robot))...)
@@ -196,7 +196,7 @@ function one_step(self::Robot, time_interval)
     nu, omega = decision(self.agent, obs)
     nu, omega = bias(self, nu, omega)
     nu, omega = stuck(self, nu, omega, time_interval)
-    self.pose = state_transition(self, nu, omega, time_interval)
+    self.pose = state_transition(self, nu, omega, time_interval, self.pose)
     self.pose = noise(self, self.pose, nu, omega, time_interval)
     self.pose = kidnap(self, self.pose, time_interval)
 end
