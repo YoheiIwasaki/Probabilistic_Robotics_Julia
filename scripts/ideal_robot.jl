@@ -50,7 +50,7 @@ function draw(self::World)
         end
     else
         self.ani = anim.FuncAnimation(fig, one_step, fargs=(self, elems, ax), 
-            frames = Int(self.time_span/self.time_interval)+1, interval = Int(self.time_interval*1000))
+            frames = Int(round(self.time_span/self.time_interval))+1, interval = Int(self.time_interval*1000))
         self.ani[:save]("test.mp4", bitrate=-1, extra_args=["-vcodec", "libx264", "-pix_fmt", "yuv420p"])
     end 
     
