@@ -90,7 +90,7 @@ mutable struct IdealRobot <: AbstractRobot
     poses
     sensor
 end
-
+IdealRobot() = IdealRobot([], 0.2, "black", nothing, [], nothing)
 IdealRobot(pose) = IdealRobot(pose, 0.2, "black", nothing, [pose], nothing)
 IdealRobot(pose, color) = IdealRobot(pose, 0.2, color, nothing, [], nothing)
 IdealRobot(pose, agent) = IdealRobot(pose, 0.2, "black", agent, [pose], nothing)
