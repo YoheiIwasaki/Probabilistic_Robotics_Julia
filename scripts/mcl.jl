@@ -4,19 +4,20 @@ using Distributions
 using LinearAlgebra
 using StatsBase
 
-mutable struct Particle
+abstract type AbstractParticle end
+mutable struct Particle <: AbstractParticle
     pose
     weight
 end
 
-function motion_update(self::Particle, nu, omega, time, noise_rate_pdf)
+function motion_update(self::AbstractParticle, nu, omega, time, noise_rate_pdf)
     ns = rand(noise_rate_pdf)
     noised_nu = nu + ns[1]*sqrt(abs(nu)/time) + ns[2]*sqrt(abs(omega)/time)
     noised_omega = omega + ns[3]*sqrt(abs(nu)/time) + ns[4]*sqrt(abs(omega)/time)
     self.pose = state_transition(IdealRobot([]), noised_nu, noised_omega, time, self.pose)
 end
 
-function observation_update(self::Particle, observation, envmap, distance_dev_rate, direction_dev)
+function observation_update(self::AbstractParticle, observation, envmap, distance_dev_rate, direction_dev)
 #     print(observation)
     for d in observation
         obs_pos = d[1]
@@ -31,7 +32,9 @@ function observation_update(self::Particle, observation, envmap, distance_dev_ra
     end
 end
 
-mutable struct Mcl
+abstract type AbstractMcl end
+
+mutable struct Mcl <: AbstractMcl
     particles
     map
     distance_dev_rate
@@ -41,10 +44,9 @@ mutable struct Mcl
     pose
 end
 
-function Mcl_(envmap, init_pose, num, motion_noise_stds=Dict("nn"=>0.19, "no"=>0.001, "on"=>0.13, "oo"=>0.2),
-                        distance_dev_rate=0.14, direction_dev=0.05)
+function Mcl_(envmap, init_pose, num, motion_noise_stds=Dict("nn"=>0.19, "no"=>0.001, "on"=>0.13, "oo"=>0.2),distance_dev_rate=0.14, direction_dev=0.05)
     self = Mcl(ntuple(x->nothing, fieldcount(Mcl))...)
-    self.particles =[Particle(init_pose, 1.0/num) for i in 1:num-1]
+    self.particles =[Particle(init_pose, 1.0/num) for i in 1:num]
     self.map = envmap
     self.distance_dev_rate = distance_dev_rate
     self.direction_dev = direction_dev
@@ -56,19 +58,19 @@ function Mcl_(envmap, init_pose, num, motion_noise_stds=Dict("nn"=>0.19, "no"=>0
     return self
 end
 
-function set_ml(self::Mcl)
+function set_ml(self::AbstractMcl)
     i = argmax([p.weight for p in self.particles])
     self.ml = self.particles[i]
     self.pose = self.ml.pose
 end
 
-function motion_update(self::Mcl, nu, omega, time)
+function motion_update(self::AbstractMcl, nu, omega, time)
     for p in self.particles
         motion_update(p, nu, omega, time, self.motion_noise_rate_pdf)
     end
 end
 
-function observation_update(self::Mcl, observation)
+function observation_update(self::AbstractMcl, observation)
     for p in self.particles
         observation_update(p, observation, self.map, self.distance_dev_rate, self.direction_dev)
     end
@@ -76,12 +78,8 @@ function observation_update(self::Mcl, observation)
     resampling(self)
 end
 
-rand(Uniform(0,10))
 
-x = []
-append!(x, 1)
-
-function resampling(self::Mcl)
+function resampling(self::AbstractMcl)
     ws = cumsum([e.weight for e in self.particles])
     if ws[end] < 1e-100
         ws = [e+1e-100 for e in ws]
@@ -108,7 +106,7 @@ function resampling(self::Mcl)
     end
 end
 
-function draw(self::Mcl, ax, elems)
+function draw(self::AbstractMcl, ax, elems)
     xs = [p.pose[1] for p in self.particles]
     ys = [p.pose[2] for p in self.particles]
     vxs = [cos(p.pose[3])*p.weight*length(self.particles) for p in self.particles]
@@ -116,7 +114,9 @@ function draw(self::Mcl, ax, elems)
     elems = vcat(elems, ax.quiver(xs, ys, vxs, vys, angles="xy", scale_units="xy", color="blue", alpha=0.5))
 end
 
-mutable struct EstimationAgent <: AbstractAgent
+abstract type AbstractEstimationAgent <: AbstractAgent end
+
+mutable struct EstimationAgent <: AbstractEstimationAgent
     nu
     omega
     estimator
@@ -143,7 +143,7 @@ function decision(self::EstimationAgent, observation=nothing)
     return self.nu, self.omega
 end
 
-function draw(self::EstimationAgent, ax, elems)
+function draw(self::AbstractEstimationAgent, ax, elems)
     draw(self.estimator, ax, elems)
     x,y,t = self.estimator.pose
     s = @sprintf("(%.2f, %.2f, %d)", x, y, Int(round(t*180/pi))%360)

@@ -140,14 +140,15 @@ function one_step(self::AbstractRobot, time_interval)
     self.pose = state_transition(self, nu, omega, time_interval, self.pose)
 end
 
-mutable struct Landmark
+abstract type AbstractLandmark end
+mutable struct Landmark <: AbstractLandmark
     pos
     id
 end
 
 Landmark(pos) = Landmark(pos, nothing)
 
-function draw(self::Landmark, ax, elems)
+function draw(self::AbstractLandmark, ax, elems)
     c = ax.scatter(self.pos[1], self.pos[2], s=100, marker="*", label="landmarks", color="orange")
     elems = vcat(elems, c)
     elems = vcat(elems, ax.text( self.pos[1], self.pos[2] , string("id:", string(self.id)), fontsize=10))
